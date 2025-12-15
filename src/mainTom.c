@@ -6,6 +6,8 @@
 const int SCREEN_WIDTH = 640;
 const int SCREEN_HEIGHT = 480;
 
+const int count = 10;
+
 int main( int argc, char* args[] )
 {
     //The window we'll be rendering to
