@@ -62,7 +62,7 @@ SDL_Texture* load_texture(SDL_Renderer* renderer , const char* path) {
 }
 
 void init_map(SDL_Renderer* renderer) {
-    textures[1] = load_texture(renderer , "assets/mur.bmp");
+    textures[1] = load_texture(renderer , "assets/wall.bmp");
     textures[2] = load_texture(renderer , "assets/point.bmp");
     textures[3] = load_texture(renderer , "assets/point.bmp");
 }
