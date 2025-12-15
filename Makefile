@@ -1,5 +1,5 @@
 CC = gcc
-TARGET = mon_jeu.exe # nom de l'executable
+TARGET = PacmanSDL.exe # nom de l'executable
 
 # ici t'as les chemins
 SRC_DIR = src
@@ -36,5 +36,8 @@ clean: # nettoie la mémoire
 
 run: all # tu éxcute l'app
 	./bin/$(TARGET)
+
+package: all
+	powershell -ExecutionPolicy Bypass -File build_release.ps1
 
 .PHONY: all clean run
