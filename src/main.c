@@ -1,22 +1,21 @@
 #include <stdio.h>
 #include <SDL.h>
 #include "map.h"
+#include "pacman.h"
 
 #define SCREEN_WIDTH MAP1_WIDTH * TILE_SIZE
 #define SCREEN_HEIGHT MAP1_HEIGHT * TILE_SIZE
 
-SDL_Window* window = NULL; // type de fenetre
-SDL_Renderer* renderer = NULL; // surface fenetre
+SDL_Window* window = NULL;
+SDL_Renderer* renderer = NULL;
 
 int init_sdl(void) {
 
-    // Init SDL
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         printf("Erreur d'initialisation de SDL : %s\n", SDL_GetError());
-        return 0; // Échec
+        return 0;
     }
 
-    // creer fenêtre
     window = SDL_CreateWindow (
         "TOMMAN",
         SDL_WINDOWPOS_CENTERED,        
@@ -26,7 +25,6 @@ int init_sdl(void) {
         SDL_WINDOW_SHOWN
     );
 
-    // pas de fenêtre
     if (window == NULL) {
         printf("Erreur de création de la fenêtre : %s\n", SDL_GetError());
         SDL_Quit();
@@ -39,14 +37,14 @@ int init_sdl(void) {
         SDL_RENDERER_ACCELERATED
     );
 
-    if (renderer == NULL) { // pas de renderer
+    if (renderer == NULL) {
         printf("Erreur de création du rendu : %s\n", SDL_GetError());
         SDL_DestroyWindow(window);
         SDL_Quit();
-        return 0; // Échec
+        return 0;
     }
 
-    return 1; // Succès
+    return 1;
 }
 
 void close_sdl(void) {
@@ -62,6 +60,7 @@ int main( int argc, char* args[] ) {
     }
 
     init_map(renderer);
+    init_pacman(renderer);
 
     // boucle du jeu
     int is_running = 1;
@@ -73,16 +72,42 @@ int main( int argc, char* args[] ) {
             if (event.type == SDL_QUIT) {
                 is_running = 0;
             }
+            else if (event.type == SDL_KEYDOWN) {
+                switch (event.key.keysym.sym) {
+                    case SDLK_UP: 
+                        set_pacman_direction(0, -1); 
+                        break;
+                    case SDLK_DOWN:  
+                        set_pacman_direction(0, 1); 
+                        break;
+                    case SDLK_LEFT:  
+                        set_pacman_direction(-1, 0); 
+                        break;
+                    case SDLK_RIGHT: 
+                        set_pacman_direction(1, 0); 
+                        break;
+                    case SDLK_ESCAPE: 
+                        is_running = 0; 
+                        break;
+                }
+            }
         }
+
+        update_pacman();
 
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderClear(renderer);
+        
         draw_map(renderer);
+        draw_pacman(renderer);
+        
         SDL_RenderPresent(renderer);
         SDL_Delay(16);
+        
     }
     
     clean_map();
+    clean_pacman();
     close_sdl();
     return 0;
 }

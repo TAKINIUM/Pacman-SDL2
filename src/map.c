@@ -80,8 +80,19 @@ void clean_map(void) {
 }
 
 int is_wall(int x , int y) {
-    if (x < 0 || x >= MAP1_WIDTH || y < 0 || y >= MAP1_HEIGHT) return 0;
+    if (x < 0 || x >= MAP1_WIDTH || y < 0 || y >= MAP1_HEIGHT) return 0; // Hors map n'est pas un mur (ou return 1 si tu veux bloquer)
     return map1[y][x] == 1;
+}
+
+int get_tile(int x, int y) {
+    if (x < 0 || x >= MAP1_WIDTH || y < 0 || y >= MAP1_HEIGHT) return -1;
+    return map1[y][x];
+}
+
+void set_tile(int x, int y, int val) {
+    if (x >= 0 && x < MAP1_WIDTH && y >= 0 && y < MAP1_HEIGHT) {
+        map1[y][x] = val;
+    }
 }
 
 int get_wall_sprite(int x , int y) {

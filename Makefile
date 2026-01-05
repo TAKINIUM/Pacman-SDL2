@@ -8,7 +8,7 @@ INCLUDE_DIR = include
 LIB_DIR = lib
 
 # chemin du main
-SOURCES = $(SRC_DIR)/main.c $(SRC_DIR)/map.c
+SOURCES = $(SRC_DIR)/main.c $(SRC_DIR)/map.c $(SRC_DIR)/pacman.c
 OBJECTS = $(SOURCES:$(SRC_DIR)/%.c=$(BUILD_DIR)/%.o)
 
 SDL_LIBS = -lmingw32 -lSDL2main -lSDL2 # les biblio qu'on intègre au projet
