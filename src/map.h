@@ -15,6 +15,4 @@ void init_map(SDL_Renderer* renderer);
 void draw_map(SDL_Renderer* renderer);
 void clean_map(void);
 
-
-
 #endif

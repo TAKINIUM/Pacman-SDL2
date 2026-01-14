@@ -2,6 +2,8 @@
 #include <SDL.h>
 #include "map.h"
 #include "pacman.h"
+#include "ghost.h"
+#include "audio.h"
 
 #define SCREEN_WIDTH MAP1_WIDTH * TILE_SIZE
 #define SCREEN_HEIGHT MAP1_HEIGHT * TILE_SIZE
@@ -61,6 +63,8 @@ int main( int argc, char* args[] ) {
 
     init_map(renderer);
     init_pacman(renderer);
+    init_ghosts(renderer);
+    init_audio();
 
     // boucle du jeu
     int is_running = 1;
@@ -86,6 +90,9 @@ int main( int argc, char* args[] ) {
                     case SDLK_RIGHT: 
                         set_pacman_direction(1, 0); 
                         break;
+                    case SDLK_p: // pathfinding
+                        toggle_ghost_pathfinding();
+                        break;
                     case SDLK_ESCAPE: 
                         is_running = 0; 
                         break;
@@ -94,12 +101,15 @@ int main( int argc, char* args[] ) {
         }
 
         update_pacman();
+        update_ghosts(get_pacman());
+        update_audio();
 
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderClear(renderer);
         
         draw_map(renderer);
         draw_pacman(renderer);
+        draw_ghosts(renderer);
         
         SDL_RenderPresent(renderer);
         SDL_Delay(16);
@@ -108,6 +118,8 @@ int main( int argc, char* args[] ) {
     
     clean_map();
     clean_pacman();
+    clean_ghosts();
+    clean_audio();
     close_sdl();
     return 0;
 }

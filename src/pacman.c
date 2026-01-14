@@ -5,6 +5,10 @@
 
 Pacman p;
 
+Pacman* get_pacman() {
+    return &p;
+}
+
 SDL_Texture* load_pacman_texture(SDL_Renderer* renderer, const char* path) {
     SDL_Surface* surface = SDL_LoadBMP(path);
     if (!surface) {
@@ -17,7 +21,7 @@ SDL_Texture* load_pacman_texture(SDL_Renderer* renderer, const char* path) {
     return tex;
 }
 
-void init_pacman(SDL_Renderer* renderer) {
+void reset_pacman() {
     p.x = 1 * TILE_SIZE;
     p.y = 1 * TILE_SIZE;
     p.dir_x = 0;
@@ -25,9 +29,14 @@ void init_pacman(SDL_Renderer* renderer) {
     p.next_dir_x = 0;
     p.next_dir_y = 0;
     p.speed = 2.0f;
-
     p.frame = 0;
+    // On conserve la direction du sprite par défaut ou on reset
     p.current_sprite_dir = DIR_RIGHT;
+}
+
+void init_pacman(SDL_Renderer* renderer) {
+    
+    reset_pacman();
 
     p.textures[DIR_RIGHT] = load_pacman_texture(renderer, "assets/PacRight.bmp");
     p.textures[DIR_LEFT]  = load_pacman_texture(renderer, "assets/PacLeft.bmp");
@@ -54,7 +63,7 @@ void update_pacman() {
         float test_y = p.y + p.next_dir_y * p.speed;
         
         if (can_move(test_x, test_y)) {
-            // Alignement sur la grille pour faciliter les virages
+            // allignement des virages
             if (p.next_dir_x != 0) p.y = (int)(p.y / TILE_SIZE + 0.5) * TILE_SIZE;
             if (p.next_dir_y != 0) p.x = (int)(p.x / TILE_SIZE + 0.5) * TILE_SIZE;
             

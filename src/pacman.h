@@ -25,5 +25,7 @@ void update_pacman();
 void draw_pacman(SDL_Renderer* renderer);
 void clean_pacman();
 void set_pacman_direction(int dx, int dy);
+Pacman* get_pacman();
+void reset_pacman();
 
 #endif
