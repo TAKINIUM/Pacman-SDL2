@@ -3,7 +3,7 @@
 #include "map.h"
 #include "pacman.h"
 #include "ghost.h"
-#include "audio.h"
+#include "audio.h" 
 
 #define SCREEN_WIDTH MAP1_WIDTH * TILE_SIZE
 #define SCREEN_HEIGHT MAP1_HEIGHT * TILE_SIZE
@@ -12,8 +12,8 @@ SDL_Window* window = NULL;
 SDL_Renderer* renderer = NULL;
 
 int init_sdl(void) {
-
-    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+    // CORRECTION ICI : Ajout de SDL_INIT_AUDIO
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0) {
         printf("Erreur d'initialisation de SDL : %s\n", SDL_GetError());
         return 0;
     }
@@ -58,13 +58,13 @@ void close_sdl(void) {
 int main( int argc, char* args[] ) {
 
     if (!init_sdl()) {
-        return 1; // echec
+        return 1; 
     }
 
     init_map(renderer);
     init_pacman(renderer);
     init_ghosts(renderer);
-    init_audio();
+    init_audio(); 
 
     // boucle du jeu
     int is_running = 1;
