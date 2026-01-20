@@ -16,6 +16,9 @@ typedef struct {
     
     int frame;
     int current_sprite_dir;
+
+    int lives;
+    int score;
     
     SDL_Texture* textures[4];
 } Pacman;

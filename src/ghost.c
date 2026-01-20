@@ -22,11 +22,15 @@ typedef struct {
     Point path[MAX_PATH_LEN];
     int path_len;
     Point random_target; 
+    int state;
 } GhostData;
 
 static GhostData ghosts[GHOST_COUNT];
 static SDL_Texture* ghost_textures[4]; 
+static SDL_Texture* phantom_eatable_texture = NULL;
+static SDL_Texture* phantom_dead_texture = NULL;
 static int show_path = 0;
+static Uint32 eatable_end_time = 0;
 
 static SDL_Texture* load_ghost_texture(SDL_Renderer* renderer, const char* path) {
     SDL_Surface* surface = SDL_LoadBMP(path);
@@ -53,13 +57,14 @@ void reset_ghosts() {
         ghosts[i].y = 14 * TILE_SIZE;
         ghosts[i].dir_x = 0;
         ghosts[i].dir_y = 0;
-        ghosts[i].speed = 2.0f;
+        ghosts[i].speed = 1.75f;
         ghosts[i].type = i;
         ghosts[i].color = colors[i];
         ghosts[i].frame = 0;
         ghosts[i].path_len = 0;
         ghosts[i].random_target.x = -1;
         ghosts[i].random_target.y = -1;
+        ghosts[i].state = GHOST_STATE_NORMAL;
     }
 }
 
@@ -68,6 +73,8 @@ void init_ghosts(SDL_Renderer* renderer) {
     ghost_textures[DIR_LEFT]  = load_ghost_texture(renderer, "assets/LeftPhantom.bmp");
     ghost_textures[DIR_UP]    = load_ghost_texture(renderer, "assets/TopPhantom.bmp");
     ghost_textures[DIR_DOWN]  = load_ghost_texture(renderer, "assets/BotPhantom.bmp");
+    phantom_eatable_texture = load_ghost_texture(renderer, "assets/EatablePhantom.bmp");
+    phantom_dead_texture = load_ghost_texture(renderer, "assets/DeadPhantom.bmp");
     reset_ghosts();
 }
 
@@ -95,8 +102,8 @@ void clamp_point(Point* p) {
 
 Point find_nearest_valid(Point target) {
     if (!is_wall(target.x, target.y)) return target;
-    // Recherche spirale pour trouver une case libre proche
-    for (int r = 1; r < 20; r++) { // Rayon augmenté
+    // Recherche spirale
+    for (int r = 1; r < 20; r++) {
         for (int dx = -r; dx <= r; dx++) {
             for (int dy = -r; dy <= r; dy++) {
                 int nx = target.x + dx;
@@ -168,39 +175,83 @@ int bfs(Point start, Point end, Point* out_path, int avoid_x, int avoid_y) {
 void update_ghosts(Pacman* p) {
     Point pac_tile = {(int)(p->x / TILE_SIZE), (int)(p->y / TILE_SIZE)};
     clamp_point(&pac_tile);
+    if (SDL_GetTicks() > eatable_end_time && eatable_end_time > 0) {
+        eatable_end_time = 0;
+         for(int i=0; i<GHOST_COUNT; i++) {
+             if (ghosts[i].state == GHOST_STATE_EATABLE) {
+                 ghosts[i].state = GHOST_STATE_NORMAL;
+             }
+         }
+    }
 
     for(int i=0; i<GHOST_COUNT; i++) {
         GhostData* g = &ghosts[i];
         g->frame = (SDL_GetTicks() / 150) % 2; 
 
+        if (g->state == GHOST_STATE_EATEN) {
+            g->speed = 4.0f;
+        } else if (g->state == GHOST_STATE_EATABLE) {
+            g->speed = 1.5f;
+        } else {
+            g->speed = 1.75f;
+        }
+
         Point ghost_tile = {(int)((g->x + TILE_SIZE/2) / TILE_SIZE), (int)((g->y + TILE_SIZE/2) / TILE_SIZE)};
         
-        // Mettre à jour collision (simple reset)
         float dist_sq = (g->x - p->x)*(g->x - p->x) + (g->y - p->y)*(g->y - p->y);
         if (dist_sq < (TILE_SIZE / 2.0f) * (TILE_SIZE / 2.0f)) {
-            reset_pacman();
-            reset_ghosts();
-            return;
+            if (g->state == GHOST_STATE_NORMAL) {
+                p->lives--;
+                if (p->lives > 0) {
+                    reset_pacman();
+                    reset_ghosts();
+                } else { }
+                return;
+            } else if (g->state == GHOST_STATE_EATABLE) {
+                g->state = GHOST_STATE_EATEN;
+                p->score += 200;
+                 g->x = (int)(g->x / TILE_SIZE + 0.5) * TILE_SIZE;
+                 g->y = (int)(g->y / TILE_SIZE + 0.5) * TILE_SIZE;
+            }
         }
 
         Point target = pac_tile;
         
-        if (g->type == 1) { // --- ROSE (Pinky) ORIGINAL PATTERN ---
-             // Vise 4 cases devant Pacman
+        if (g->state == GHOST_STATE_EATEN) {
+             target = (Point){-1, -1};
+             for(int y=0; y<MAP1_HEIGHT; y++) {
+                 for(int x=0; x<MAP1_WIDTH; x++) {
+                     if (get_tile(x, y) == 4) {
+                         target = (Point){x, y};
+                         break;
+                     }
+                 }
+                 if (target.x != -1) break;
+             }
+             if (target.x == -1) target = (Point){13, 14};
+
+             if (ghost_tile.x == target.x && ghost_tile.y == target.y) {
+                 g->state = GHOST_STATE_NORMAL;
+             }
+        }
+        else if (g->state == GHOST_STATE_EATABLE) {
+             target.x = ghost_tile.x + (ghost_tile.x - pac_tile.x);
+             target.y = ghost_tile.y + (ghost_tile.y - pac_tile.y);
+             clamp_point(&target);
+             target = find_nearest_valid(target);
+        }
+        else if (g->type == 1) {
              int offset = 4;
              target.x = pac_tile.x + p->dir_x * offset;
              target.y = pac_tile.y + p->dir_y * offset;
-             
-             // Reproduction du bug original d'arcade :
-             // Si Pacman regarde vers le HAUT, on décale aussi vers la GAUCHE
-             if (p->dir_y == -1) { // UP
+             if (p->dir_y == -1) {
                  target.x -= offset;
              }
              
              clamp_point(&target);
              target = find_nearest_valid(target);
         } 
-        else if (g->type == 3) { // JAUNE - Aléatoire pur
+        else if (g->type == 3) {
             int reached = (ghost_tile.x == g->random_target.x && ghost_tile.y == g->random_target.y);
             if (g->random_target.x == -1 || reached || is_wall(g->random_target.x, g->random_target.y)) {
                 int rx, ry;
@@ -214,18 +265,15 @@ void update_ghosts(Pacman* p) {
             target = g->random_target;
         }
 
-        // --- Déplacement ---
         float cx = ghost_tile.x * TILE_SIZE;
         float cy = ghost_tile.y * TILE_SIZE;
         float dx = fabs(g->x - cx);
         float dy = fabs(g->y - cy);
-
-        // Au centre de la tuile
         if (dx < g->speed && dy < g->speed) {
             g->x = cx; 
             g->y = cy;
             
-            if (g->type == 2) { // Bleu : Chemin alternatif
+            if (g->type == 2) {
                 Point p1[MAX_PATH_LEN];
                 int len1 = bfs(ghost_tile, pac_tile, p1, -1, -1);
                 int used_alt = 0;
@@ -297,14 +345,26 @@ void draw_ghosts(SDL_Renderer* renderer) {
              SDL_RenderFillRect(renderer, &r);
         }
 
-        int tex_idx = DIR_RIGHT;
-        if (g->dir_x == -1) tex_idx = DIR_LEFT;
-        else if (g->dir_y == -1) tex_idx = DIR_UP;
-        else if (g->dir_y == 1) tex_idx = DIR_DOWN;
+        SDL_Texture* tex = NULL;
+        if (g->state == GHOST_STATE_EATEN) {
+             tex = phantom_dead_texture;
+        } else if (g->state == GHOST_STATE_EATABLE) {
+             tex = phantom_eatable_texture;
+        } else {
+            int tex_idx = DIR_RIGHT;
+            if (g->dir_x == -1) tex_idx = DIR_LEFT;
+            else if (g->dir_y == -1) tex_idx = DIR_UP;
+            else if (g->dir_y == 1) tex_idx = DIR_DOWN;
+            tex = ghost_textures[tex_idx];
+        }
         
-        SDL_Texture* tex = ghost_textures[tex_idx];
         SDL_Rect dest = {(int)g->x, (int)g->y, TILE_SIZE, TILE_SIZE};
-        SDL_Rect src = { g->frame * TILE_SIZE, g->type * TILE_SIZE, TILE_SIZE, TILE_SIZE };
+        int src_y = g->type * TILE_SIZE;
+        // Fix for eatable/dead states where texture might be single row
+        if (g->state == GHOST_STATE_EATABLE || g->state == GHOST_STATE_EATEN) {
+            src_y = 0;
+        }
+        SDL_Rect src = { g->frame * TILE_SIZE, src_y, TILE_SIZE, TILE_SIZE };
         
         if (tex) {
             SDL_RenderCopy(renderer, tex, &src, &dest);
@@ -319,8 +379,19 @@ void toggle_ghost_pathfinding() {
     show_path = !show_path;
 }
 
+void set_ghosts_eatable(void) {
+    eatable_end_time = SDL_GetTicks() + 10000; // 10 seconds
+    for (int i = 0; i < GHOST_COUNT; i++) {
+        if (ghosts[i].state == GHOST_STATE_NORMAL) {
+            ghosts[i].state = GHOST_STATE_EATABLE;
+        }
+    }
+}
+
 void clean_ghosts() {
     for(int i=0; i<4; i++) {
         if (ghost_textures[i]) SDL_DestroyTexture(ghost_textures[i]);
     }
+    if (phantom_eatable_texture) SDL_DestroyTexture(phantom_eatable_texture);
+    if (phantom_dead_texture) SDL_DestroyTexture(phantom_dead_texture);
 }

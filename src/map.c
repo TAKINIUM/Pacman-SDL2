@@ -23,7 +23,7 @@ int map1[MAP1_HEIGHT][MAP1_WIDTH] = {
     {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
     {1,2,2,2,2,2,2,2,2,2,2,2,2,1,1,2,2,2,2,2,2,2,2,2,2,2,2,1},
     {1,2,1,1,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,1,1,2,1},
-    {1,2,1,1,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,1,1,2,1},
+    {1,3,1,1,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,1,1,3,1},
     {1,2,1,1,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,1,1,2,1},
     {1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1},
     {1,2,1,1,1,1,2,1,1,2,1,1,1,1,1,1,1,1,2,1,1,2,1,1,1,1,2,1},
@@ -34,7 +34,7 @@ int map1[MAP1_HEIGHT][MAP1_WIDTH] = {
     {0,0,0,0,0,1,2,1,1,2,2,2,2,2,2,2,2,2,2,1,1,2,1,0,0,0,0,0},
     {0,0,0,0,0,1,2,1,1,2,1,1,1,0,0,1,1,1,2,1,1,2,1,0,0,0,0,0},
     {1,1,1,1,1,1,2,1,1,2,1,0,0,0,0,0,0,1,2,1,1,2,1,1,1,1,1,1},
-    {0,0,0,0,0,0,2,2,2,2,1,0,0,0,0,0,0,1,2,2,2,2,0,0,0,0,0,0},
+    {0,0,0,0,0,0,2,2,2,2,1,0,0,4,0,0,0,1,2,2,2,2,0,0,0,0,0,0},
     {1,1,1,1,1,1,2,1,1,2,1,0,0,0,0,0,0,1,2,1,1,2,1,1,1,1,1,1},
     {0,0,0,0,0,1,2,1,1,2,1,1,1,1,1,1,1,1,2,1,1,2,1,0,0,0,0,0},
     {0,0,0,0,0,1,2,1,1,2,2,2,2,2,2,2,2,2,2,1,1,2,1,0,0,0,0,0},
@@ -43,7 +43,7 @@ int map1[MAP1_HEIGHT][MAP1_WIDTH] = {
     {1,2,2,2,2,2,2,2,2,2,2,2,2,1,1,2,2,2,2,2,2,2,2,2,2,2,2,1},
     {1,2,1,1,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,1,1,2,1},
     {1,2,1,1,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,1,1,2,1},
-    {1,2,2,2,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,2,2,2,1},
+    {1,3,2,2,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,2,2,3,1},
     {1,1,1,2,1,1,2,1,1,2,1,1,1,1,1,1,1,1,2,1,1,2,1,1,2,1,1,1},
     {1,1,1,2,1,1,2,1,1,2,1,1,1,1,1,1,1,1,2,1,1,2,1,1,2,1,1,1},
     {1,2,2,2,2,2,2,1,1,2,2,2,2,1,1,2,2,2,2,1,1,2,2,2,2,2,2,1},
@@ -59,6 +59,7 @@ SDL_Texture* load_texture(SDL_Renderer* renderer , const char* path) {
         printf("Erreur chargement image %s : %s\n", path, SDL_GetError());
         return NULL;
     }
+    SDL_SetColorKey(Surface, SDL_TRUE, SDL_MapRGB(Surface->format, 0, 0, 0));
     SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, Surface);
     SDL_FreeSurface(Surface);
     return texture;
@@ -67,7 +68,7 @@ SDL_Texture* load_texture(SDL_Renderer* renderer , const char* path) {
 void init_map(SDL_Renderer* renderer) {
     textures[1] = load_texture(renderer , "assets/Walls.bmp");
     textures[2] = load_texture(renderer , "assets/point.bmp");
-    // textures[3] = load_texture(renderer , "assets/point.bmp");
+    textures[3] = load_texture(renderer , "assets/GrosPoint.bmp");
 }
 
 void clean_map(void) {
@@ -196,6 +197,11 @@ void draw_map(SDL_Renderer* renderer) {
                 srcRect.x = (spriteIndex / SPRITE_SHEET_ROWS) * TILE_SIZE;
                 srcRect.y = (spriteIndex % SPRITE_SHEET_ROWS) * TILE_SIZE;
                 SDL_RenderCopy(renderer , textures[1] , &srcRect , &destRect);
+            } else if (type == 3 && textures[3] != NULL) {
+                int frame = (SDL_GetTicks() / 150) % 7;
+                srcRect.x = frame * TILE_SIZE;
+                srcRect.y = 0;
+                SDL_RenderCopy(renderer, textures[3], &srcRect, &destRect);
             } else if (type >= 0 && type < 6 && textures[type] != NULL) {
                 SDL_RenderCopy(renderer, textures[type], NULL, &destRect);
             } else if (type == 1) { 

@@ -8,7 +8,38 @@ static Uint32 wav_length_intro = 0;
 static Uint8 *wav_buffer_loop = NULL;
 static Uint32 wav_length_loop = 0;
 
+static int audio_volume = SDL_MIX_MAXVOLUME; // 128
+
+void set_audio_volume(int vol) {
+    if (vol < 0) vol = 0;
+    if (vol > SDL_MIX_MAXVOLUME) vol = SDL_MIX_MAXVOLUME;
+    audio_volume = vol;
+}
+
+void queue_audio_with_volume(Uint8* buffer, Uint32 length, SDL_AudioSpec* spec) {
+    if (deviceId == 0 || !buffer || length == 0) return;
+    
+    // Allocate temp buffer
+    Uint8* mix_buf = (Uint8*)malloc(length);
+    if (!mix_buf) return;
+    
+    // Initialize with silence or copy? SDL_MixAudio writes OVER buffer or Adds.
+    // SDL_MixAudioFormat mixes source into destination.
+    // But we just want volume adjustment.
+    // Clean way: memset 0 then Mix? No, Mix adds.
+    // We can just use SDL_MixAudioFormat with source as buffer?
+    // "This function mixes the audio data ... into the destination buffer."
+    // If destination is silence, it effectively controls volume.
+    memset(mix_buf, 0, length);
+    SDL_MixAudioFormat(mix_buf, buffer, spec->format, length, audio_volume);
+    
+    SDL_QueueAudio(deviceId, mix_buf, length);
+    free(mix_buf);
+}
+
 static int audio_state = 0; // 0 = intro || 1 = loop || 2 = erreurs/mute
+static SDL_AudioSpec current_spec;
+
 void init_audio() {
     SDL_AudioSpec wav_spec_intro;
     SDL_AudioSpec wav_spec_loop;
@@ -38,7 +69,8 @@ void init_audio() {
         } else {
             // intro
             if (wav_buffer_intro && wav_length_intro > 0) {
-                SDL_QueueAudio(deviceId, wav_buffer_intro, wav_length_intro);
+                current_spec = wav_spec_intro; // IMPORTANT: Save spec for volume mixing
+                queue_audio_with_volume(wav_buffer_intro, wav_length_intro, &current_spec);
                 printf("AUDIO: Playing Intro...\n");
             }
             SDL_PauseAudioDevice(deviceId, 0); // Unpause
@@ -54,20 +86,19 @@ void update_audio() {
 
     // intro
     if (audio_state == 0) {
-        // loop
-        if (queued == 0) {
+        // loop trigger slightly before end to avoid gap
+        if (queued < 8192) { // Pre-buffer if running low
             if (wav_buffer_loop && wav_length_loop > 0) {
                 audio_state = 1;
-                SDL_QueueAudio(deviceId, wav_buffer_loop, wav_length_loop);
-                // printf("AUDIO: start loop\n");
+                queue_audio_with_volume(wav_buffer_loop, wav_length_loop, &current_spec);
             }
         }
     } 
     // loop
      else if (audio_state == 1) {
-        // reloop
+        // reloop - keep buffer filled
         if (queued < wav_length_loop) {
-             SDL_QueueAudio(deviceId, wav_buffer_loop, wav_length_loop);
+             queue_audio_with_volume(wav_buffer_loop, wav_length_loop, &current_spec);
         }
     }
 }

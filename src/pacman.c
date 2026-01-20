@@ -1,5 +1,7 @@
 #include "pacman.h"
 #include "map.h"
+#include "ghost.h"
+#include "menu.h"
 #include <stdio.h>
 #include <math.h>
 
@@ -35,7 +37,8 @@ void reset_pacman() {
 }
 
 void init_pacman(SDL_Renderer* renderer) {
-    
+    p.lives = get_max_lives();
+    p.score = 0;
     reset_pacman();
 
     p.textures[DIR_RIGHT] = load_pacman_texture(renderer, "assets/PacRight.bmp");
@@ -100,8 +103,14 @@ void update_pacman() {
     int tile_y = (int)(p.y + TILE_SIZE / 2) / TILE_SIZE;
 
     if (tile_x >= 0 && tile_x < MAP1_WIDTH && tile_y >= 0 && tile_y < MAP1_HEIGHT) {
-        if (get_tile(tile_x, tile_y) == 2) {
+        int tile_val = get_tile(tile_x, tile_y);
+        if (tile_val == 2) {
             set_tile(tile_x, tile_y, 0);
+            p.score += 10;
+        } else if (tile_val == 3) {
+            set_tile(tile_x, tile_y, 0);
+            p.score += 50;
+            set_ghosts_eatable();
         }
     }
 }
